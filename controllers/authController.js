@@ -2,7 +2,7 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
-// Registrasi
+// Regist
 exports.register = async (req, res) => {
     const { name, email, password, role } = req.body;
 
@@ -12,7 +12,7 @@ exports.register = async (req, res) => {
             return res.status(400).json({ message: 'User already exists' });
         }
 
-        // Hash password
+        // Hash
         const hashedPassword = await bcrypt.hash(password, 10);
 
         const newUser = new User({
