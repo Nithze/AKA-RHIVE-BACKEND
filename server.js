@@ -1,11 +1,13 @@
 const express = require('express');
 const connectDB = require('./config/db');
-const authRoutes = require('./routes/authRoutes');
-const shiftRoutes = require('./routes/shiftRoutes');
 const cors = require('cors');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
 const errorHandler = require('./utils/errorHandler');
+
+// routes
+const authRoutes = require('./routes/authRoutes');
+const shiftRoutes = require('./routes/shiftRoutes');
 
 dotenv.config();
 
