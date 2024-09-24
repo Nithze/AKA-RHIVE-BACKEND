@@ -15,7 +15,17 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+//log
+app.use(morgan('combined')); 
+app.use((req, res, next) => {
+    res.on('finish', () => {
+        console.log(`Method: ${req.method}, URL: ${req.originalUrl}, Status: ${res.statusCode}`);
+    });
+    next();
+});
 app.use(morgan('dev'));
+
 
 // MongoDB
 connectDB();
