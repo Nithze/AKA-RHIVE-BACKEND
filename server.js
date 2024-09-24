@@ -1,3 +1,4 @@
+// kalau ada error "File is a CommonJS module; it may be converted to an ES module." biarin aja
 const express = require('express');
 const connectDB = require('./config/db');
 const cors = require('cors');
