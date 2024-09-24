@@ -1,6 +1,7 @@
 const express = require('express');
 const connectDB = require('./config/db');
 const authRoutes = require('./routes/authRoutes');
+const shiftRoutes = require('./routes/shiftRoutes');
 const cors = require('cors');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
@@ -21,6 +22,7 @@ connectDB();
 
 // Rute
 app.use('/api/auth', authRoutes);
+app.use('/api/shifts', shiftRoutes);
 
 // Error Handling Middleware
 app.use(errorHandler);
