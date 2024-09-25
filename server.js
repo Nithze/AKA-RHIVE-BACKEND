@@ -44,7 +44,9 @@ app.use('/api/employees', employeeRoutes);
 // Error Handling Middleware
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+// wif
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on http://0.0.0.0:${PORT}`);
 });
+
 
