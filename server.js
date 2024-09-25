@@ -10,6 +10,7 @@ const errorHandler = require('./utils/errorHandler');
 const authRoutes = require('./routes/authRoutes');
 const shiftRoutes = require('./routes/shiftRoutes');
 const roleRoutes = require('./routes/roleRoutes');
+const employeeRoutes = require('./routes/employeeRoutes');
 
 dotenv.config();
 
@@ -38,6 +39,7 @@ connectDB();
 app.use('/api/auth', authRoutes);
 app.use('/api/shifts', shiftRoutes);
 app.use('/api/roles', roleRoutes);
+app.use('/api/employees', employeeRoutes);
 
 // Error Handling Middleware
 app.use(errorHandler);
