@@ -12,6 +12,35 @@ exports.createEmployee = async (req, res) => {
         res.status(500).json({ message: 'Error creating employee', error });
     }
 };
+// Login Employee
+exports.loginEmployee = async (req, res) => {
+    const { nik, password } = req.body;
+
+    try {
+        const employee = await Employee.findOne({ nik }).populate('role').populate('shift');
+        if (!employee) {
+            return res.status(400).json({ message: 'Invalid credentials' });
+        }
+
+        // Cek password langsung tanpa hashing
+        if (employee.password !== password) {
+            return res.status(400).json({ message: 'Invalid credentials' });
+        }
+
+        // Jika login berhasil, kirimkan data karyawan beserta role dan shift
+        res.json({
+            id: employee._id,
+            fullName: employee.fullName,
+            nik: employee.nik,
+            role: employee.role, // Lengkap dengan detail role
+            shift: employee.shift, // Lengkap dengan detail shift
+            phoneNumber: employee.phoneNumber,
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Error logging in', error });
+    }
+};
+
 
 
 // Get All Employees
