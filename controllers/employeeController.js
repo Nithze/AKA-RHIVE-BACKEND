@@ -1,17 +1,64 @@
 const Employee = require('../models/Employee');
 
+// // Create Employee
+// exports.createEmployee = async (req, res) => {
+//     const { fullName, nik, birthDate, gender, address, role, startDate, shift, phoneNumber, password } = req.body;
+//
+//     try {
+//         const newEmployee = new Employee({ fullName, nik, birthDate, gender, address, role, startDate, shift, phoneNumber, password });
+//         await newEmployee.save();
+//         res.status(201).json(newEmployee);
+//     } catch (error) {
+//         res.status(500).json({ message: 'Error creating employee', error });
+//     }
+// };
+
 // Create Employee
 exports.createEmployee = async (req, res) => {
-    const { fullName, nik, birthDate, gender, address, role, startDate, shift, phoneNumber, password } = req.body;
+    const { fullName, nik, birthDate, gender, address, role, startDate, shift, phoneNumber, password, bankAccountNumber, accountHolderName } = req.body;
 
     try {
-        const newEmployee = new Employee({ fullName, nik, birthDate, gender, address, role, startDate, shift, phoneNumber, password });
+        const newEmployee = new Employee({ fullName, nik, birthDate, gender, address, role, startDate, shift, phoneNumber, password, bankAccountNumber, accountHolderName });
         await newEmployee.save();
         res.status(201).json(newEmployee);
     } catch (error) {
         res.status(500).json({ message: 'Error creating employee', error });
     }
 };
+
+
+
+// Login Employee
+exports.loginEmployee = async (req, res) => {
+    const { nik, password } = req.body;
+
+    try {
+        const employee = await Employee.findOne({ nik }).populate('role').populate('shift');
+        if (!employee) {
+            return res.status(400).json({ message: 'Invalid credentials' });
+        }
+
+        // Cek password langsung tanpa hashing
+        if (employee.password !== password) {
+            return res.status(400).json({ message: 'Invalid credentials' });
+        }
+
+        // Jika login berhasil, kirimkan data karyawan beserta role dan shift
+        res.json({
+            id: employee._id,
+            fullName: employee.fullName,
+            nik: employee.nik,
+            role: employee.role, // Lengkap dengan detail role
+            shift: employee.shift, // Lengkap dengan detail shift
+            phoneNumber: employee.phoneNumber,
+            bankAccountNumber: employee.bankAccountNumber, // Tambahkan nomor rekening
+            accountHolderName: employee.accountHolderName, // Tambahkan atas nama rekening
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Error logging in', error });
+    }
+};
+
 // Login Employee
 exports.loginEmployee = async (req, res) => {
     const { nik, password } = req.body;
