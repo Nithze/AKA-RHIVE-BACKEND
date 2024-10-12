@@ -63,7 +63,7 @@ const Shift = require('../models/Shift');
 //         res.status(500).json({ message: 'Error checking in', error });
 //     }
 // };
-// Check In
+// Check In AM / PM fixxxxxxxxxxxxxxxxxxxx
 exports.checkIn = async (req, res) => {
     const { employeeId } = req.body;
 
