@@ -321,7 +321,7 @@ exports.getAttendanceInMonth = async (req, res) => {
 
                 return {
                     employeeId: employee._id,
-                    employeeName: employee.fullName, // Ganti sesuai field nama karyawan
+                    employeeName: employee.fullName,
                     shiftId: employee.shift._id,
                     shiftName: employee.shift.shiftName,
                     shiftStart: employee.shift.startTime,
