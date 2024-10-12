@@ -317,7 +317,7 @@ exports.approveLeave = async (req, res) => {
             return res.status(404).json({ message: 'Attendance not found' });
         }
 
-        attendance.status = 'Izin'; // Ubah status menjadi Izin
+        attendance.status = 'Absent'; // Ubah status menjadi Izin
         await attendance.save();
         res.json(attendance);
     } catch (error) {
