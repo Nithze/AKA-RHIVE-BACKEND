@@ -2,68 +2,7 @@ const Attendance = require('../models/Attendance');
 const Employee = require('../models/Employee');
 const Shift = require('../models/Shift');
 
-// // Check In
-// exports.checkIn = async (req, res) => {
-//     const { employeeId } = req.body;
-//
-//     try {
-//         const employee = await Employee.findById(employeeId).populate('shift');
-//         if (!employee) {
-//             return res.status(404).json({ message: 'Employee not found' });
-//         }
-//
-//         const shift = employee.shift;
-//         const currentTime = new Date();
-//
-//         // Parse startTime dari shift ke objek Date
-//         const shiftStart = new Date();
-//         const [startHour, startMinute] = shift.startTime.split(':');
-//         const isPM = shift.startTime.endsWith('PM');
-//
-//         shiftStart.setHours(parseInt(startHour) + (isPM ? 12 : 0), parseInt(startMinute.slice(0, 2)), 0, 0);
-//
-//         // Waktu check-in yang diperbolehkan
-//         const checkInStart = new Date(shiftStart.getTime() - 15 * 60 * 1000); // 15 menit sebelum shift
-//         const checkInEnd = new Date(shiftStart.getTime() + 2 * 60 * 60 * 1000); // 2 jam setelah shift
-//
-//         if (currentTime < checkInStart || currentTime > checkInEnd) {
-//             return res.status(400).json({ message: 'You can only check in 15 minutes before your shift starts and up to 2 hours after.' });
-//         }
-//
-//         const today = new Date();
-//         const attendanceToday = await Attendance.findOne({
-//             employee: employeeId,
-//             checkInTime: {
-//                 $gte: new Date(today.setHours(0, 0, 0, 0)),
-//                 $lt: new Date(today.setHours(23, 59, 59, 999))
-//             }
-//         });
-//
-//         if (attendanceToday) {
-//             return res.status(400).json({ message: 'You have already checked in today.' });
-//         }
-//
-//         // Hitung keterlambatan
-//         let lateTime = 0;
-//         if (currentTime > shiftStart) {
-//             const lateMs = currentTime - shiftStart;
-//             lateTime = Math.floor(lateMs / (1000 * 60)); // Konversi dari milidetik ke menit
-//         }
-//
-//         const attendance = new Attendance({
-//             employee: employeeId,
-//             shift: shift._id,
-//             checkInTime: currentTime,
-//             lateTime, // Simpan waktu keterlambatan
-//         });
-//
-//         await attendance.save();
-//         res.status(201).json(attendance);
-//     } catch (error) {
-//         res.status(500).json({ message: 'Error checking in', error });
-//     }
-// };
-// Check In AM / PM fixxxxxxxxxxxxxxxxxxxx
+// Check In
 exports.checkIn = async (req, res) => {
     const { employeeId } = req.body;
 
@@ -77,14 +16,9 @@ exports.checkIn = async (req, res) => {
         const currentTime = new Date();
 
         // Parse startTime dari shift ke objek Date
-        const shiftStart = new Date();
         const [startHour, startMinute] = shift.startTime.split(':');
-        const isPM = shift.startTime.endsWith('PM');
-        const hour = parseInt(startHour);
-
-        // Mengonversi jam ke format 24 jam
-        shiftStart.setHours((isPM && hour !== 12) ? hour + 12 : (hour === 12 ? 0 : hour), 
-                            parseInt(startMinute.slice(0, 2)), 0, 0);
+        const shiftStart = new Date(currentTime);
+        shiftStart.setHours(parseInt(startHour), parseInt(startMinute), 0, 0);
 
         // Waktu check-in yang diperbolehkan
         const checkInStart = new Date(shiftStart.getTime() - 15 * 60 * 1000); // 15 menit sebelum shift
@@ -128,62 +62,6 @@ exports.checkIn = async (req, res) => {
     }
 };
 
-
-
-// // Check In
-// exports.checkIn = async (req, res) => {
-//     const { employeeId } = req.body;
-//
-//     try {
-//         const employee = await Employee.findById(employeeId).populate('shift');
-//         if (!employee) {
-//             return res.status(404).json({ message: 'Employee not found' });
-//         }
-//
-//         const shift = employee.shift;
-//         const currentTime = new Date();
-//
-//         // Parse startTime dari shift ke objek Date
-//         const shiftStart = new Date();
-//         const [startHour, startMinute] = shift.startTime.split(':');
-//         const isPM = shift.startTime.endsWith('PM');
-//         
-//         shiftStart.setHours(parseInt(startHour) + (isPM ? 12 : 0), parseInt(startMinute.slice(0, 2)), 0, 0);
-//
-//         // Waktu check-in yang diperbolehkan
-//         const checkInStart = new Date(shiftStart.getTime() - 15 * 60 * 1000); // 15 menit sebelum
-//         const checkInEnd = new Date(shiftStart.getTime() + 2 * 60 * 60 * 1000); // 2 jam setelah
-//
-//         if (currentTime < checkInStart || currentTime > checkInEnd) {
-//             return res.status(400).json({ message: 'You can only check in 15 minutes before your shift starts and up to 2 hours after.' });
-//         }
-//
-//         const today = new Date();
-//         const attendanceToday = await Attendance.findOne({
-//             employee: employeeId,
-//             checkInTime: {
-//                 $gte: new Date(today.setHours(0, 0, 0, 0)),
-//                 $lt: new Date(today.setHours(23, 59, 59, 999))
-//             }
-//         });
-//
-//         if (attendanceToday) {
-//             return res.status(400).json({ message: 'You have already checked in today.' });
-//         }
-//
-//         const attendance = new Attendance({
-//             employee: employeeId,
-//             shift: shift._id,
-//             checkInTime: currentTime,
-//         });
-//
-//         await attendance.save();
-//         res.status(201).json(attendance);
-//     } catch (error) {
-//         res.status(500).json({ message: 'Error checking in', error });
-//     }
-// };
-
 // Check Out
 exports.checkOut = async (req, res) => {
     const { attendanceId } = req.body;
@@ -196,17 +74,9 @@ exports.checkOut = async (req, res) => {
 
         const currentTime = new Date();
         const [endHour, endMinute] = attendance.shift.endTime.split(':');
-        const isEndPM = attendance.shift.endTime.endsWith('PM');
         
         const shiftEnd = new Date();
-        let endHour24 = parseInt(endHour) + (isEndPM && parseInt(endHour) !== 12 ? 12 : 0);
-        if (endHour === '12' && isEndPM) {
-            endHour24 = 12;
-        } else if (endHour === '12' && !isEndPM) {
-            endHour24 = 0;
-        }
-        
-        shiftEnd.setHours(endHour24, parseInt(endMinute.slice(0, 2)), 0, 0);
+        shiftEnd.setHours(parseInt(endHour), parseInt(endMinute), 0, 0);
 
         if (currentTime < shiftEnd) {
             return res.status(400).json({ message: 'You can only check out after your shift has ended.' });
@@ -229,30 +99,6 @@ exports.checkOut = async (req, res) => {
     }
 };
 
-// // Request Leave
-// exports.requestLeave = async (req, res) => {
-//     const { employeeId, reason, file } = req.body;
-//
-//     try {
-//         const employee = await Employee.findById(employeeId).populate('shift');
-//         if (!employee) {
-//             return res.status(404).json({ message: 'Employee not found' });
-//         }
-//
-//         const leaveRequest = new Attendance({
-//             employee: employeeId,
-//             shift: employee.shift._id, // Mengambil shift dari employee
-//             status: 'Pending', // Status awal Pending
-//             reason: reason,
-//             file: file,
-//         });
-//
-//         await leaveRequest.save();
-//         res.status(201).json(leaveRequest);
-//     } catch (error) {
-//         res.status(500).json({ message: 'Error requesting leave', error });
-//     }
-// };
 // Request Leave
 exports.requestLeave = async (req, res) => {
     const { employeeId, reason, file } = req.body;
@@ -305,7 +151,6 @@ exports.requestLeave = async (req, res) => {
         res.status(500).json({ message: 'Error requesting leave', error });
     }
 };
-
 
 // Approve Leave
 exports.approveLeave = async (req, res) => {
@@ -369,21 +214,13 @@ exports.getCurrentShiftAttendance = async (req, res) => {
         const currentShiftAttendances = [];
 
         for (const shift of shifts) {
-            const shiftStart = new Date();
             const [startHour, startMinute] = shift.startTime.split(':');
-            const isStartPM = shift.startTime.endsWith('PM');
-            shiftStart.setHours(parseInt(startHour) + (isStartPM ? 12 : 0), parseInt(startMinute.slice(0, 2)), 0, 0);
+            const shiftStart = new Date();
+            shiftStart.setHours(parseInt(startHour), parseInt(startMinute), 0, 0);
 
-            const shiftEnd = new Date();
             const [endHour, endMinute] = shift.endTime.split(':');
-            const isEndPM = shift.endTime.endsWith('PM');
-            let endHour24 = parseInt(endHour) + (isEndPM && parseInt(endHour) !== 12 ? 12 : 0);
-            if (endHour === '12' && isEndPM) {
-                endHour24 = 12;
-            } else if (endHour === '12' && !isEndPM) {
-                endHour24 = 0;
-            }
-            shiftEnd.setHours(endHour24, parseInt(endMinute.slice(0, 2)), 0, 0);
+            const shiftEnd = new Date();
+            shiftEnd.setHours(parseInt(endHour), parseInt(endMinute), 0, 0);
 
             if (currentTime >= shiftStart && currentTime <= shiftEnd) {
                 const attendances = await Attendance.find({ shift: shift._id }).populate('employee');
@@ -399,6 +236,7 @@ exports.getCurrentShiftAttendance = async (req, res) => {
         res.status(500).json({ message: 'Error fetching current shift attendance', error });
     }
 };
+
 
 // Get All Attendance in a Month
 exports.getAttendanceInMonth = async (req, res) => {
@@ -439,6 +277,7 @@ exports.getAttendanceInMonth = async (req, res) => {
                         attendanceRecords.push({
                             date: formattedDate,
                             status: attendance.status,
+                            lateTime: attendance.lateTime || 0, // Tambahkan lateTime, jika tidak ada beri nilai 0
                         });
                     } else {
                         // Status untuk tanggal hari ini dan sebelumnya
@@ -446,12 +285,14 @@ exports.getAttendanceInMonth = async (req, res) => {
                             attendanceRecords.push({
                                 date: formattedDate,
                                 status: 'Alpha', // Status tidak hadir
+                                lateTime: null, // Tidak ada keterlambatan karena absen
                             });
                         } else {
                             // Status untuk tanggal setelah hari ini
                             attendanceRecords.push({
                                 date: formattedDate,
                                 status: 0, // Status untuk tanggal setelah hari ini
+                                lateTime: null, // Tidak ada keterlambatan untuk tanggal di masa depan
                             });
                         }
                     }
@@ -474,5 +315,4 @@ exports.getAttendanceInMonth = async (req, res) => {
         res.status(500).json({ message: 'Error fetching attendance by month', error });
     }
 };
-
 
