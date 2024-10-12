@@ -32,6 +32,10 @@ const attendanceSchema = new mongoose.Schema({
         type: String, // Untuk menyimpan URL atau path file izin
         required: false,
     },
+        lateTime: {
+        type: Number, // Dalam menit
+        required: false,
+    },
 }, { timestamps: true });
 
 module.exports = mongoose.model('Attendance', attendanceSchema);
