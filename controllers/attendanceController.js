@@ -397,9 +397,9 @@ exports.getAttendanceInMonth = async (req, res) => {
 
     try {
         // Dapatkan tanggal awal dan akhir bulan
-        const startDate = new Date(year, month - 1, 1); // Bulan di JavaScript dimulai dari 0
-        const endDate = new Date(year, month, 0); // Mengambil hari terakhir bulan ini
-        const today = new Date(); // Dapatkan tanggal hari ini
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month, 0);
+        const today = new Date();
         today.setHours(0, 0, 0, 0); // Atur waktu ke awal hari
 
         // Dapatkan semua karyawan
@@ -410,54 +410,48 @@ exports.getAttendanceInMonth = async (req, res) => {
                 // Dapatkan attendances karyawan dalam rentang tanggal tersebut
                 const attendances = await Attendance.find({
                     employee: employee._id,
-                    checkInTime: {
+                    // Mengambil semua attendance dalam rentang tanggal
+                    createdAt: {
                         $gte: startDate,
-                        $lt: new Date(endDate.setDate(endDate.getDate() + 1)), // Tambah satu hari untuk menyertakan hari terakhir
+                        $lt: new Date(endDate.setDate(endDate.getDate() + 1)),
                     },
                 });
 
-                // Buat array untuk menyimpan status harian
                 const attendanceRecords = [];
-                const daysInMonth = new Date(year, month, 0).getDate(); // Dapatkan jumlah hari dalam bulan
+                const daysInMonth = new Date(year, month, 0).getDate();
 
                 for (let day = 1; day <= daysInMonth; day++) {
                     const date = new Date(year, month - 1, day);
-                    const formattedDate = date.toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).split(',')[0]; // Format tanggal ke DD/MM/YYYY
+                    const formattedDate = date.toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).split(',')[0];
 
                     // Cek apakah ada data absensi untuk tanggal ini
                     const attendance = attendances.find(att => {
-                        const checkInDate = new Date(att.checkInTime).toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).split(',')[0];
+                        const checkInDate = new Date(att.createdAt).toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).split(',')[0];
                         return checkInDate === formattedDate;
                     });
 
                     if (attendance) {
-                        // Dapatkan waktu check-in dan check-out dalam format WIB
-                        const checkInTime = new Date(attendance.checkInTime).toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                        const checkOutTime = new Date(attendance.checkOutTime).toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
                         attendanceRecords.push({
                             date: formattedDate,
                             status: attendance.status,
-                            lateTime: attendance.lateTime || 0, // Tambahkan lateTime, jika tidak ada beri nilai 0
-                            checkInTime: checkInTime,
-                            checkOutTime: checkOutTime,
+                            lateTime: attendance.lateTime || 0,
+                            checkInTime: null, // Ganti dengan logika yang sesuai
+                            checkOutTime: null, // Ganti dengan logika yang sesuai
                         });
                     } else {
-                        // Status untuk tanggal hari ini dan sebelumnya
                         if (date <= today) {
                             attendanceRecords.push({
                                 date: formattedDate,
                                 status: 'Alpha', // Status tidak hadir
-                                lateTime: null, // Tidak ada keterlambatan karena absen
+                                lateTime: null,
                                 checkInTime: null,
                                 checkOutTime: null,
                             });
                         } else {
-                            // Status untuk tanggal setelah hari ini
                             attendanceRecords.push({
                                 date: formattedDate,
                                 status: 0, // Status untuk tanggal setelah hari ini
-                                lateTime: null, // Tidak ada keterlambatan untuk tanggal di masa depan
+                                lateTime: null,
                                 checkInTime: null,
                                 checkOutTime: null,
                             });
