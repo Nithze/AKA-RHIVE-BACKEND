@@ -12,6 +12,21 @@ const Shift = require('../models/Shift');
 //             return res.status(404).json({ message: 'Employee not found' });
 //         }
 //
+//         // Cek apakah karyawan memiliki pengajuan izin yang masih pending atau disetujui
+//         const leaveRequest = await Attendance.findOne({
+//             employee: employeeId,
+//             status: { $in: ['Pending', 'Absent'] }, // Status izin yang relevan
+//             reason: { $exists: true }, // Pastikan ada alasan izin
+//             createdAt: {
+//                 $gte: new Date(new Date().setHours(0, 0, 0, 0)), // Awal hari
+//                 $lt: new Date(new Date().setHours(23, 59, 59, 999)) // Akhir hari
+//             }
+//         });
+//
+//         if (leaveRequest) {
+//             return res.status(400).json({ message: 'You cannot check in because you have a pending leave request.' });
+//         }
+//
 //         const shift = employee.shift;
 //         const currentTime = new Date();
 //
@@ -71,14 +86,13 @@ exports.checkIn = async (req, res) => {
             return res.status(404).json({ message: 'Employee not found' });
         }
 
-        // Cek apakah karyawan memiliki pengajuan izin yang masih pending atau disetujui
         const leaveRequest = await Attendance.findOne({
             employee: employeeId,
-            status: { $in: ['Pending', 'Absent'] }, // Status izin yang relevan
-            reason: { $exists: true }, // Pastikan ada alasan izin
+            status: { $in: ['Pending', 'Absent'] },
+            reason: { $exists: true },
             createdAt: {
-                $gte: new Date(new Date().setHours(0, 0, 0, 0)), // Awal hari
-                $lt: new Date(new Date().setHours(23, 59, 59, 999)) // Akhir hari
+                $gte: new Date(new Date().setHours(0, 0, 0, 0)),
+                $lt: new Date(new Date().setHours(23, 59, 59, 999))
             }
         });
 
@@ -89,19 +103,6 @@ exports.checkIn = async (req, res) => {
         const shift = employee.shift;
         const currentTime = new Date();
 
-        // Parse startTime dari shift ke objek Date
-        const [startHour, startMinute] = shift.startTime.split(':');
-        const shiftStart = new Date(currentTime);
-        shiftStart.setHours(parseInt(startHour), parseInt(startMinute), 0, 0);
-
-        // Waktu check-in yang diperbolehkan
-        const checkInStart = new Date(shiftStart.getTime() - 15 * 60 * 1000); // 15 menit sebelum shift
-        const checkInEnd = new Date(shiftStart.getTime() + 2 * 60 * 60 * 1000); // 2 jam setelah shift
-
-        if (currentTime < checkInStart || currentTime > checkInEnd) {
-            return res.status(400).json({ message: 'You can only check in 15 minutes before your shift starts and up to 2 hours after.' });
-        }
-
         const today = new Date();
         const attendanceToday = await Attendance.findOne({
             employee: employeeId,
@@ -111,22 +112,36 @@ exports.checkIn = async (req, res) => {
             }
         });
 
+        // Cek apakah sudah check-in hari ini
         if (attendanceToday) {
             return res.status(400).json({ message: 'You have already checked in today.' });
+        }
+
+        // Parse startTime dari shift ke objek Date
+        const [startHour, startMinute] = shift.startTime.split(':');
+        const shiftStart = new Date(currentTime);
+        shiftStart.setHours(parseInt(startHour), parseInt(startMinute), 0, 0);
+
+        const checkInStart = new Date(shiftStart.getTime() - 15 * 60 * 1000);
+        const checkInEnd = new Date(shiftStart.getTime() + 2 * 60 * 60 * 1000);
+
+        // Cek apakah waktu check-in berada dalam batas yang diperbolehkan
+        if (currentTime < checkInStart || currentTime > checkInEnd) {
+            return res.status(400).json({ message: 'You can only check in 15 minutes before your shift starts and up to 2 hours after.' });
         }
 
         // Hitung keterlambatan
         let lateTime = 0;
         if (currentTime > shiftStart) {
             const lateMs = currentTime - shiftStart;
-            lateTime = Math.floor(lateMs / (1000 * 60)); // Konversi dari milidetik ke menit
+            lateTime = Math.floor(lateMs / (1000 * 60));
         }
 
         const attendance = new Attendance({
             employee: employeeId,
             shift: shift._id,
             checkInTime: currentTime,
-            lateTime, // Simpan waktu keterlambatan
+            lateTime,
         });
 
         await attendance.save();
@@ -135,6 +150,7 @@ exports.checkIn = async (req, res) => {
         res.status(500).json({ message: 'Error checking in', error });
     }
 };
+
 
 
 // Check Out
@@ -313,170 +329,6 @@ exports.getCurrentShiftAttendance = async (req, res) => {
 };
 
 
-// // Get All Attendance in a Month
-// exports.getAttendanceInMonth = async (req, res) => {
-//     const { year, month } = req.params; // Ambil parameter tahun dan bulan
-//
-//     try {
-//         // Dapatkan tanggal awal dan akhir bulan
-//         const startDate = new Date(year, month - 1, 1); // Bulan di JavaScript dimulai dari 0
-//         const endDate = new Date(year, month, 0); // Mengambil hari terakhir bulan ini
-//         const today = new Date(); // Dapatkan tanggal hari ini
-//         today.setHours(0, 0, 0, 0); // Atur waktu ke awal hari
-//
-//         // Dapatkan semua karyawan
-//         const employees = await Employee.find().populate('shift');
-//
-//         const attendanceData = await Promise.all(
-//             employees.map(async (employee) => {
-//                 // Dapatkan attendances karyawan dalam rentang tanggal tersebut
-//                 const attendances = await Attendance.find({
-//                     employee: employee._id,
-//                     checkInTime: {
-//                         $gte: startDate,
-//                         $lt: new Date(endDate.setDate(endDate.getDate() + 1)), // Tambah satu hari untuk menyertakan hari terakhir
-//                     },
-//                 });
-//
-//                 // Buat array untuk menyimpan status harian
-//                 const attendanceRecords = [];
-//                 const daysInMonth = new Date(year, month, 0).getDate(); // Dapatkan jumlah hari dalam bulan
-//
-//                 for (let day = 1; day <= daysInMonth; day++) {
-//                     const date = new Date(year, month - 1, day);
-//                     const formattedDate = date.toISOString().split('T')[0]; // Format tanggal ke YYYY-MM-DD
-//
-//                     // Cek apakah ada data absensi untuk tanggal ini
-//                     const attendance = attendances.find(att => att.checkInTime.toISOString().split('T')[0] === formattedDate);
-//                     if (attendance) {
-//                         attendanceRecords.push({
-//                             date: formattedDate,
-//                             status: attendance.status,
-//                             lateTime: attendance.lateTime || 0, // Tambahkan lateTime, jika tidak ada beri nilai 0
-//                         });
-//                     } else {
-//                         // Status untuk tanggal hari ini dan sebelumnya
-//                         if (date <= today) {
-//                             attendanceRecords.push({
-//                                 date: formattedDate,
-//                                 status: 'Alpha', // Status tidak hadir
-//                                 lateTime: null, // Tidak ada keterlambatan karena absen
-//                             });
-//                         } else {
-//                             // Status untuk tanggal setelah hari ini
-//                             attendanceRecords.push({
-//                                 date: formattedDate,
-//                                 status: 0, // Status untuk tanggal setelah hari ini
-//                                 lateTime: null, // Tidak ada keterlambatan untuk tanggal di masa depan
-//                             });
-//                         }
-//                     }
-//                 }
-//
-//                 return {
-//                     employeeId: employee._id,
-//                     employeeName: employee.fullName,
-//                     shiftId: employee.shift._id,
-//                     shiftName: employee.shift.shiftName,
-//                     shiftStart: employee.shift.startTime,
-//                     shiftEnd: employee.shift.endTime,
-//                     attendance: attendanceRecords,
-//                 };
-//             })
-//         );
-//
-//         res.json(attendanceData);
-//     } catch (error) {
-//         res.status(500).json({ message: 'Error fetching attendance by month', error });
-//     }
-// };
-//
-// Get All Attendance in a Month
-// exports.getAttendanceInMonth = async (req, res) => {
-//     const { year, month } = req.params; // Ambil parameter tahun dan bulan
-//
-//     try {
-//         // Dapatkan tanggal awal dan akhir bulan
-//         const startDate = new Date(year, month - 1, 1);
-//         const endDate = new Date(year, month, 0);
-//         const today = new Date();
-//         today.setHours(0, 0, 0, 0); // Atur waktu ke awal hari
-//
-//         // Dapatkan semua karyawan
-//         const employees = await Employee.find().populate('shift');
-//
-//         const attendanceData = await Promise.all(
-//             employees.map(async (employee) => {
-//                 // Dapatkan attendances karyawan dalam rentang tanggal tersebut
-//                 const attendances = await Attendance.find({
-//                     employee: employee._id,
-//                     // Mengambil semua attendance dalam rentang tanggal
-//                     createdAt: {
-//                         $gte: startDate,
-//                         $lt: new Date(endDate.setDate(endDate.getDate() + 1)),
-//                     },
-//                 });
-//
-//                 const attendanceRecords = [];
-//                 const daysInMonth = new Date(year, month, 0).getDate();
-//
-//                 for (let day = 1; day <= daysInMonth; day++) {
-//                     const date = new Date(year, month - 1, day);
-//                     const formattedDate = date.toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).split(',')[0];
-//
-//                     // Cek apakah ada data absensi untuk tanggal ini
-//                     const attendance = attendances.find(att => {
-//                         const checkInDate = new Date(att.createdAt).toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).split(',')[0];
-//                         return checkInDate === formattedDate;
-//                     });
-//
-//                     if (attendance) {
-//                         attendanceRecords.push({
-//                             date: formattedDate,
-//                             status: attendance.status,
-//                             lateTime: attendance.lateTime || 0,
-//                             checkInTime: null, // Ganti dengan logika yang sesuai
-//                             checkOutTime: null, // Ganti dengan logika yang sesuai
-//                         });
-//                     } else {
-//                         if (date <= today) {
-//                             attendanceRecords.push({
-//                                 date: formattedDate,
-//                                 status: 'Alpha', // Status tidak hadir
-//                                 lateTime: null,
-//                                 checkInTime: null,
-//                                 checkOutTime: null,
-//                             });
-//                         } else {
-//                             attendanceRecords.push({
-//                                 date: formattedDate,
-//                                 status: 0, // Status untuk tanggal setelah hari ini
-//                                 lateTime: null,
-//                                 checkInTime: null,
-//                                 checkOutTime: null,
-//                             });
-//                         }
-//                     }
-//                 }
-//
-//                 return {
-//                     employeeId: employee._id,
-//                     employeeName: employee.fullName,
-//                     shiftId: employee.shift._id,
-//                     shiftName: employee.shift.shiftName,
-//                     shiftStart: employee.shift.startTime,
-//                     shiftEnd: employee.shift.endTime,
-//                     attendance: attendanceRecords,
-//                 };
-//             })
-//         );
-//
-//         res.json(attendanceData);
-//     } catch (error) {
-//         res.status(500).json({ message: 'Error fetching attendance by month', error });
-//     }
-// };
-//
 // Get All Attendance in a Month
 exports.getAttendanceInMonth = async (req, res) => {
     const { year, month } = req.params; // Ambil parameter tahun dan bulan
