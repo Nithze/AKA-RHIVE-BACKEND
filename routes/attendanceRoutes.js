@@ -9,7 +9,8 @@ const {
     getAttendanceByShiftId,
     getCurrentShiftAttendance,
     getAttendanceInMonth,
-    getAttendanceByEmployeeIdInMonth
+    getAttendanceByEmployeeIdInMonth,
+    getPendingAttendances
 } = require('../controllers/attendanceController');
 
 const router = express.Router();
@@ -60,6 +61,10 @@ router.get('/monthly/:year/:month', async (req, res) => {
 
 router.get('/monthly/:year/:month/employee/:employeeId', async (req, res) => {
     await getAttendanceByEmployeeIdInMonth(req, res);
+});
+
+router.get('/request/pending', async (req, res) => {
+    await getPendingAttendances(req, res);
 });
 
 module.exports = router;

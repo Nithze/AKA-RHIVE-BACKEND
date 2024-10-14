@@ -826,3 +826,69 @@ exports.getAttendanceByEmployeeIdInMonth = async (req, res) => {
     }
 };
 
+
+
+
+
+// aaaaaaaaaaaaaaaaaaa
+// Get All Pending Attendances with Reason
+exports.getPendingAttendances = async (req, res) => {
+    try {
+        // Dapatkan semua karyawan
+        const employees = await Employee.find().populate('shift');
+
+        const pendingAttendanceData = await Promise.all(
+            employees.map(async (employee) => {
+                // Dapatkan attendances dengan status Pending untuk karyawan tersebut
+                const attendances = await Attendance.find({
+                    employee: employee._id,
+                    status: 'Pending', // Filter hanya untuk status Pending
+                });
+
+                if (attendances.length > 0) {
+                    const attendanceRecords = attendances.map(attendance => {
+                        const formattedDate = new Date(attendance.createdAt).toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).split(',')[0];
+                        
+                        const checkInTime = attendance.checkInTime
+                            ? new Date(attendance.checkInTime).toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                            : null;
+
+                        const checkOutTime = attendance.checkOutTime
+                            ? new Date(attendance.checkOutTime).toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                            : null;
+
+                        return {
+                            attendanceId: attendance._id, // Tambahkan attendance ID
+                            date: formattedDate,
+                            status: attendance.status,
+                            lateTime: attendance.lateTime || 0,
+                            checkInTime: checkInTime,
+                            checkOutTime: checkOutTime,
+                            reason: attendance.reason || 'No reason provided', // Tambahkan reason jika ada
+                        };
+                    });
+
+                    return {
+                        employeeId: employee._id,
+                        employeeName: employee.fullName,
+                        shiftId: employee.shift._id,
+                        shiftName: employee.shift.shiftName,
+                        shiftStart: employee.shift.startTime,
+                        shiftEnd: employee.shift.endTime,
+                        attendance: attendanceRecords,
+                    };
+                } else {
+                    return null; // Tidak ada data pending untuk karyawan ini
+                }
+            })
+        );
+
+        // Filter out null responses (karyawan tanpa data pending)
+        const filteredAttendanceData = pendingAttendanceData.filter(record => record !== null);
+
+        res.json(filteredAttendanceData);
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching pending attendances', error });
+    }
+};
+
