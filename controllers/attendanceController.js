@@ -831,11 +831,11 @@ exports.getAttendanceByEmployeeIdInMonth = async (req, res) => {
 
 
 // aaaaaaaaaaaaaaaaaaa
-// Get All Pending Attendances with Reason
+// Get All Pending Attendances
 exports.getPendingAttendances = async (req, res) => {
     try {
-        // Dapatkan semua karyawan
-        const employees = await Employee.find().populate('shift');
+        // Dapatkan semua karyawan beserta role dan shift mereka
+        const employees = await Employee.find().populate('shift').populate('role');
 
         const pendingAttendanceData = await Promise.all(
             employees.map(async (employee) => {
@@ -848,7 +848,7 @@ exports.getPendingAttendances = async (req, res) => {
                 if (attendances.length > 0) {
                     const attendanceRecords = attendances.map(attendance => {
                         const formattedDate = new Date(attendance.createdAt).toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).split(',')[0];
-                        
+
                         const checkInTime = attendance.checkInTime
                             ? new Date(attendance.checkInTime).toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit' })
                             : null;
@@ -858,19 +858,21 @@ exports.getPendingAttendances = async (req, res) => {
                             : null;
 
                         return {
-                            attendanceId: attendance._id, // Tambahkan attendance ID
+                            attendanceId: attendance._id, // Attendance ID
                             date: formattedDate,
                             status: attendance.status,
+                            reason: attendance.reason || 'No reason provided', // Tampilkan alasan jika ada
                             lateTime: attendance.lateTime || 0,
                             checkInTime: checkInTime,
                             checkOutTime: checkOutTime,
-                            reason: attendance.reason || 'No reason provided', // Tambahkan reason jika ada
                         };
                     });
 
                     return {
                         employeeId: employee._id,
                         employeeName: employee.fullName,
+                        phoneNumber: employee.phoneNumber, // Tampilkan nomor telepon
+                        role: employee.role.role, // Tampilkan role karyawan
                         shiftId: employee.shift._id,
                         shiftName: employee.shift.shiftName,
                         shiftStart: employee.shift.startTime,
