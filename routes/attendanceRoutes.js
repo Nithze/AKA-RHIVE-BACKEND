@@ -8,7 +8,8 @@ const {
     getAllAttendance,
     getAttendanceByShiftId,
     getCurrentShiftAttendance,
-    getAttendanceInMonth
+    getAttendanceInMonth,
+    getAttendanceByEmployeeIdInMonth
 } = require('../controllers/attendanceController');
 
 const router = express.Router();
@@ -53,9 +54,12 @@ router.get('/current-shift', async (req, res) => {
     await getCurrentShiftAttendance(req, res);
 });
 
-// Get Current Shift Attendance
 router.get('/monthly/:year/:month', async (req, res) => {
     await getAttendanceInMonth(req, res);
+});
+
+router.get('/monthly/:year/:month/employee/:employeeId', async (req, res) => {
+    await getAttendanceByEmployeeIdInMonth(req, res);
 });
 
 module.exports = router;
