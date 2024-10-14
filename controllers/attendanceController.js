@@ -97,7 +97,7 @@ exports.checkIn = async (req, res) => {
         });
 
         if (leaveRequest) {
-            return res.status(400).json({ message: 'You cannot check in because you have a pending leave request.' });
+            return res.status(400).json({ message: 'You cannot check in because you have a leave request.' });
         }
 
         const shift = employee.shift;
@@ -329,6 +329,211 @@ exports.getCurrentShiftAttendance = async (req, res) => {
 };
 
 
+// // Get All Attendance in a Month
+// exports.getAttendanceInMonth = async (req, res) => {
+//     const { year, month } = req.params; // Ambil parameter tahun dan bulan
+//
+//     try {
+//         // Dapatkan tanggal awal dan akhir bulan
+//         const startDate = new Date(year, month - 1, 1);
+//         const endDate = new Date(year, month, 0);
+//         const today = new Date();
+//         today.setHours(0, 0, 0, 0); // Atur waktu ke awal hari
+//
+//         // Dapatkan semua karyawan
+//         const employees = await Employee.find().populate('shift');
+//
+//         const attendanceData = await Promise.all(
+//             employees.map(async (employee) => {
+//                 // Dapatkan attendances karyawan dalam rentang tanggal tersebut
+//                 const attendances = await Attendance.find({
+//                     employee: employee._id,
+//                     // Mengambil semua attendance dalam rentang tanggal
+//                     createdAt: {
+//                         $gte: startDate,
+//                         $lt: new Date(endDate.setDate(endDate.getDate() + 1)),
+//                     },
+//                 });
+//
+//                 const attendanceRecords = [];
+//                 const daysInMonth = new Date(year, month, 0).getDate();
+//
+//                 for (let day = 1; day <= daysInMonth; day++) {
+//                     const date = new Date(year, month - 1, day);
+//                     const formattedDate = date.toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).split(',')[0];
+//
+//                     // Cek apakah ada data absensi untuk tanggal ini
+//                     const attendance = attendances.find(att => {
+//                         const checkInDate = new Date(att.createdAt).toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).split(',')[0];
+//                         return checkInDate === formattedDate;
+//                     });
+//
+//                     if (attendance) {
+//                         // Format checkInTime dan checkOutTime sesuai dengan zona waktu
+//                         const checkInTime = attendance.checkInTime
+//                             ? new Date(attendance.checkInTime).toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+//                             : null;
+//
+//                         const checkOutTime = attendance.checkOutTime
+//                             ? new Date(attendance.checkOutTime).toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+//                             : null;
+//
+//                         attendanceRecords.push({
+//                             date: formattedDate,
+//                             status: attendance.status,
+//                             lateTime: attendance.lateTime || 0,
+//                             checkInTime: checkInTime,
+//                             checkOutTime: checkOutTime,
+//                         });
+//                     } else {
+//                         if (date <= today) {
+//                             attendanceRecords.push({
+//                                 date: formattedDate,
+//                                 status: 'Alpha', // Status tidak hadir
+//                                 lateTime: null,
+//                                 checkInTime: null,
+//                                 checkOutTime: null,
+//                             });
+//                         } else {
+//                             attendanceRecords.push({
+//                                 date: formattedDate,
+//                                 status: 0, // Status untuk tanggal setelah hari ini
+//                                 lateTime: null,
+//                                 checkInTime: null,
+//                                 checkOutTime: null,
+//                             });
+//                         }
+//                     }
+//                 }
+//
+//                 return {
+//                     employeeId: employee._id,
+//                     employeeName: employee.fullName,
+//                     shiftId: employee.shift._id,
+//                     shiftName: employee.shift.shiftName,
+//                     shiftStart: employee.shift.startTime,
+//                     shiftEnd: employee.shift.endTime,
+//                     attendance: attendanceRecords,
+//                 };
+//             })
+//         );
+//
+//         res.json(attendanceData);
+//     } catch (error) {
+//         res.status(500).json({ message: 'Error fetching attendance by month', error });
+//     }
+// };
+//
+// // Get All Attendance in a Month
+// exports.getAttendanceInMonth = async (req, res) => {
+//     const { year, month } = req.params; // Ambil parameter tahun dan bulan
+//
+//     try {
+//         // Dapatkan tanggal awal dan akhir bulan
+//         const startDate = new Date(year, month - 1, 1);
+//         const endDate = new Date(year, month, 0);
+//         const today = new Date();
+//         today.setHours(0, 0, 0, 0); // Atur waktu ke awal hari
+//
+//         // Dapatkan semua karyawan
+//         const employees = await Employee.find().populate('shift');
+//
+//         const attendanceData = await Promise.all(
+//             employees.map(async (employee) => {
+//                 // Dapatkan attendances karyawan dalam rentang tanggal tersebut
+//                 const attendances = await Attendance.find({
+//                     employee: employee._id,
+//                     // Mengambil semua attendance dalam rentang tanggal
+//                     createdAt: {
+//                         $gte: startDate,
+//                         $lt: new Date(endDate.setDate(endDate.getDate() + 1)),
+//                     },
+//                 });
+//
+//                 const attendanceRecords = [];
+//                 const daysInMonth = new Date(year, month, 0).getDate();
+//                 const employeeStartDate = new Date(employee.startDate); // Tanggal mulai kerja karyawan
+//                 employeeStartDate.setHours(0, 0, 0, 0); // Set jam karyawan mulai bekerja ke awal hari
+//
+//                 for (let day = 1; day <= daysInMonth; day++) {
+//                     const date = new Date(year, month - 1, day);
+//                     date.setHours(0, 0, 0, 0); // Set jam ke awal hari untuk perbandingan yang akurat
+//                     const formattedDate = date.toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).split(',')[0];
+//
+//                     // Cek apakah tanggal ini sebelum tanggal mulai kerja karyawan
+//                     if (date < employeeStartDate) {
+//                         attendanceRecords.push({
+//                             date: formattedDate,
+//                             status: 0, // Status untuk tanggal sebelum karyawan mulai bekerja
+//                             lateTime: null,
+//                             checkInTime: null,
+//                             checkOutTime: null,
+//                         });
+//                         continue; // Lewati pengecekan lebih lanjut untuk tanggal ini
+//                     }
+//
+//                     // Cek apakah ada data absensi untuk tanggal ini
+//                     const attendance = attendances.find(att => {
+//                         const checkInDate = new Date(att.createdAt).toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).split(',')[0];
+//                         return checkInDate === formattedDate;
+//                     });
+//
+//                     if (attendance) {
+//                         // Format checkInTime dan checkOutTime sesuai dengan zona waktu
+//                         const checkInTime = attendance.checkInTime
+//                             ? new Date(attendance.checkInTime).toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+//                             : null;
+//
+//                         const checkOutTime = attendance.checkOutTime
+//                             ? new Date(attendance.checkOutTime).toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+//                             : null;
+//
+//                         attendanceRecords.push({
+//                             date: formattedDate,
+//                             status: attendance.status,
+//                             lateTime: attendance.lateTime || 0,
+//                             checkInTime: checkInTime,
+//                             checkOutTime: checkOutTime,
+//                         });
+//                     } else {
+//                         if (date <= today) {
+//                             attendanceRecords.push({
+//                                 date: formattedDate,
+//                                 status: 'Alpha', // Status tidak hadir
+//                                 lateTime: null,
+//                                 checkInTime: null,
+//                                 checkOutTime: null,
+//                             });
+//                         } else {
+//                             attendanceRecords.push({
+//                                 date: formattedDate,
+//                                 status: 0, // Status untuk tanggal setelah hari ini
+//                                 lateTime: null,
+//                                 checkInTime: null,
+//                                 checkOutTime: null,
+//                             });
+//                         }
+//                     }
+//                 }
+//
+//                 return {
+//                     employeeId: employee._id,
+//                     employeeName: employee.fullName,
+//                     shiftId: employee.shift._id,
+//                     shiftName: employee.shift.shiftName,
+//                     shiftStart: employee.shift.startTime,
+//                     shiftEnd: employee.shift.endTime,
+//                     attendance: attendanceRecords,
+//                 };
+//             })
+//         );
+//
+//         res.json(attendanceData);
+//     } catch (error) {
+//         res.status(500).json({ message: 'Error fetching attendance by month', error });
+//     }
+// };
+//
 // Get All Attendance in a Month
 exports.getAttendanceInMonth = async (req, res) => {
     const { year, month } = req.params; // Ambil parameter tahun dan bulan
@@ -357,10 +562,25 @@ exports.getAttendanceInMonth = async (req, res) => {
 
                 const attendanceRecords = [];
                 const daysInMonth = new Date(year, month, 0).getDate();
+                const employeeStartDate = new Date(employee.startDate); // Tanggal mulai kerja karyawan
+                employeeStartDate.setHours(0, 0, 0, 0); // Set jam karyawan mulai bekerja ke awal hari
 
                 for (let day = 1; day <= daysInMonth; day++) {
                     const date = new Date(year, month - 1, day);
+                    date.setHours(0, 0, 0, 0); // Set jam ke awal hari untuk perbandingan yang akurat
                     const formattedDate = date.toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).split(',')[0];
+
+                    // Cek apakah tanggal ini sebelum tanggal mulai kerja karyawan
+                    if (date < employeeStartDate) {
+                        attendanceRecords.push({
+                            date: formattedDate,
+                            status: 0, // Status untuk tanggal sebelum karyawan mulai bekerja
+                            lateTime: null,
+                            checkInTime: null,
+                            checkOutTime: null,
+                        });
+                        continue; // Lewati pengecekan lebih lanjut untuk tanggal ini
+                    }
 
                     // Cek apakah ada data absensi untuk tanggal ini
                     const attendance = attendances.find(att => {
@@ -386,10 +606,27 @@ exports.getAttendanceInMonth = async (req, res) => {
                             checkOutTime: checkOutTime,
                         });
                     } else {
-                        if (date <= today) {
+                        // Cek jika belum check-in dan waktu sudah lewat 2 jam dari shift start
+                        const shiftStartTime = new Date(date);
+                        const [hours, minutes] = employee.shift.startTime.split(':');
+                        shiftStartTime.setHours(hours, minutes, 0, 0); // Set waktu sesuai shift start
+
+                        // Tambahkan 2 jam ke shift start
+                        const gracePeriod = new Date(shiftStartTime);
+                        gracePeriod.setHours(gracePeriod.getHours() + 2);
+
+                        if (today >= date && today >= gracePeriod) {
                             attendanceRecords.push({
                                 date: formattedDate,
-                                status: 'Alpha', // Status tidak hadir
+                                status: 'Alpha', // Status tidak hadir jika lebih dari 2 jam dari shift start
+                                lateTime: null,
+                                checkInTime: null,
+                                checkOutTime: null,
+                            });
+                        } else if (date <= today) {
+                            attendanceRecords.push({
+                                date: formattedDate,
+                                status: 'Awaiting', // Status belum check-in tapi masih dalam rentang waktu
                                 lateTime: null,
                                 checkInTime: null,
                                 checkOutTime: null,
