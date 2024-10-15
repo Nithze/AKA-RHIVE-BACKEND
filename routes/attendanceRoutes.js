@@ -4,13 +4,15 @@ const {
     checkOut,
     requestLeave,
     approveLeave,
+    disApproveLeave,
     getAttendanceByEmployee,
     getAllAttendance,
     getAttendanceByShiftId,
     getCurrentShiftAttendance,
     getAttendanceInMonth,
     getAttendanceByEmployeeIdInMonth,
-    getPendingAttendances
+    getPendingAttendances,
+    countAttendanceStatusByEmployeeIdInMonth
 } = require('../controllers/attendanceController');
 
 const router = express.Router();
@@ -33,6 +35,11 @@ router.post('/leave', async (req, res) => {
 // Approve Leave
 router.put('/approve-leave/:attendanceId', async (req, res) => {
     await approveLeave(req, res);
+});
+
+// DisApprove Leave
+router.put('/disapprove-leave/:attendanceId', async (req, res) => {
+    await disApproveLeave(req, res);
 });
 
 // Get Attendance by Employee ID
@@ -65,6 +72,10 @@ router.get('/monthly/:year/:month/employee/:employeeId', async (req, res) => {
 
 router.get('/request/pending', async (req, res) => {
     await getPendingAttendances(req, res);
+});
+
+router.get('/alpha/:year/:month/:employeeId', async (req, res) => {
+    await countAttendanceStatusByEmployeeIdInMonth(req, res);
 });
 
 module.exports = router;

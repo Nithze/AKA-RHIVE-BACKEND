@@ -261,6 +261,24 @@ exports.approveLeave = async (req, res) => {
     }
 };
 
+// Approve Leave
+exports.disApproveLeave = async (req, res) => {
+    const { attendanceId } = req.params;
+
+    try {
+        const attendance = await Attendance.findById(attendanceId);
+        if (!attendance) {
+            return res.status(404).json({ message: 'Attendance not found' });
+        }
+
+        attendance.status = 'Alpha'; // Ubah status menjadi Alpha
+        await attendance.save();
+        res.json(attendance);
+    } catch (error) {
+        res.status(500).json({ message: 'Error approving leave', error });
+    }
+};
+
 // Get Attendance by Employee
 exports.getAttendanceByEmployee = async (req, res) => {
     const { employeeId } = req.params;
@@ -891,6 +909,132 @@ exports.getPendingAttendances = async (req, res) => {
         res.json(filteredAttendanceData);
     } catch (error) {
         res.status(500).json({ message: 'Error fetching pending attendances', error });
+    }
+};
+
+// Count Attendance Status by Employee ID in a Month
+exports.countAttendanceStatusByEmployeeIdInMonth = async (req, res) => {
+    const { year, month, employeeId } = req.params; // Ambil parameter tahun, bulan, dan employeeId
+
+    try {
+        // Dapatkan tanggal awal dan akhir bulan
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month, 0);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Atur waktu ke awal hari
+
+        // Dapatkan karyawan berdasarkan employeeId
+        const employee = await Employee.findById(employeeId).populate('shift');
+
+        if (!employee) {
+            return res.status(404).json({ message: 'Employee not found' });
+        }
+
+        // Dapatkan attendances karyawan dalam rentang tanggal tersebut
+        const attendances = await Attendance.find({
+            employee: employee._id,
+            createdAt: {
+                $gte: startDate,
+                $lt: new Date(endDate.setDate(endDate.getDate() + 1)),
+            },
+        });
+
+        const attendanceRecords = [];
+        const daysInMonth = new Date(year, month, 0).getDate();
+        const employeeStartDate = new Date(employee.startDate); // Tanggal mulai kerja karyawan
+        employeeStartDate.setHours(0, 0, 0, 0); // Set jam karyawan mulai bekerja ke awal hari
+
+        // Inisialisasi counter untuk status
+        let countAlpha = 0;
+        let countPresent = 0;
+        let countAbsent = 0;
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const date = new Date(year, month - 1, day);
+            date.setHours(0, 0, 0, 0); // Set jam ke awal hari untuk perbandingan yang akurat
+            const formattedDate = date.toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).split(',')[0];
+
+            // Cek apakah tanggal ini sebelum tanggal mulai kerja karyawan
+            if (date < employeeStartDate) {
+                attendanceRecords.push({
+                    date: formattedDate,
+                    status: 0, // Status untuk tanggal sebelum karyawan mulai bekerja
+                    lateTime: null,
+                    checkInTime: null,
+                    checkOutTime: null,
+                    attendanceId: null,
+                });
+                continue; // Lewati pengecekan lebih lanjut untuk tanggal ini
+            }
+
+            // Cek apakah ada data absensi untuk tanggal ini
+            const attendance = attendances.find(att => {
+                const checkInDate = new Date(att.createdAt).toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).split(',')[0];
+                return checkInDate === formattedDate;
+            });
+
+            if (attendance) {
+                // Format checkInTime dan checkOutTime sesuai dengan zona waktu
+                const checkInTime = attendance.checkInTime
+                    ? new Date(attendance.checkInTime).toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                    : null;
+
+                const checkOutTime = attendance.checkOutTime
+                    ? new Date(attendance.checkOutTime).toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                    : null;
+
+                // Tambahkan ke attendanceRecords
+                attendanceRecords.push({
+                    date: formattedDate,
+                    status: attendance.status,
+                    lateTime: attendance.lateTime || 0,
+                    checkInTime: checkInTime,
+                    checkOutTime: checkOutTime,
+                    attendanceId: attendance._id, // Tambahkan ID attendance
+                });
+
+                // Hitung status
+                if (attendance.status === 'Present') {
+                    countPresent++;
+                } else if (attendance.status === 'Alpha') {
+                    countAlpha++;
+                } else {
+                    countAbsent++;
+                }
+            } else {
+                // Cek jika belum check-in dan waktu sudah lewat 2 jam dari shift start
+                const shiftStartTime = new Date(date);
+                const [hours, minutes] = employee.shift.startTime.split(':');
+                shiftStartTime.setHours(hours, minutes, 0, 0); // Set waktu sesuai shift start
+
+                // Tambahkan 2 jam ke shift start
+                const gracePeriod = new Date(shiftStartTime);
+                gracePeriod.setHours(gracePeriod.getHours() + 2);
+
+                if (today >= date && today >= gracePeriod) {
+                    countAlpha++; // Hitung Alpha jika lebih dari 2 jam dari shift start
+                } else if (date <= today) {
+                    countAbsent++; // Hitung Absent jika sudah lewat hari ini
+                }
+            }
+        }
+
+        // Kembalikan hasil perhitungan
+        res.json({
+            employeeId: employee._id,
+            employeeName: employee.fullName,
+            shiftId: employee.shift._id,
+            shiftName: employee.shift.shiftName,
+            shiftStart: employee.shift.startTime,
+            shiftEnd: employee.shift.endTime,
+            counts: {
+                Alpha: countAlpha,
+                Present: countPresent,
+                Absent: countAbsent,
+            },
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Error counting attendance status by employee and month', error });
     }
 };
 
