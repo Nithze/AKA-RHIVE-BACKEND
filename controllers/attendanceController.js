@@ -315,34 +315,130 @@ exports.getAttendanceByShiftId = async (req, res) => {
 
 // Get Current Shift Attendance
 exports.getCurrentShiftAttendance = async (req, res) => {
-    const currentTime = new Date();
+    // const currentTime = new Date();
+    //
+    // try {
+    //     const shifts = await Shift.find();
+    //
+    //     const currentShiftAttendances = [];
+    //
+    //     for (const shift of shifts) {
+    //         const [startHour, startMinute] = shift.startTime.split(':');
+    //         const shiftStart = new Date();
+    //         shiftStart.setHours(parseInt(startHour), parseInt(startMinute), 0, 0);
+    //
+    //         const [endHour, endMinute] = shift.endTime.split(':');
+    //         const shiftEnd = new Date();
+    //         shiftEnd.setHours(parseInt(endHour), parseInt(endMinute), 0, 0);
+    //
+    //         if (currentTime >= shiftStart && currentTime <= shiftEnd) {
+    //             const attendances = await Attendance.find({ shift: shift._id }).populate('employee');
+    //             currentShiftAttendances.push({
+    //                 shift,
+    //                 attendances,
+    //             });
+    //         }
+    //     }
+    //
+    //     res.json(currentShiftAttendances);
+    // } catch (error) {
+    //     res.status(500).json({ message: 'Error fetching current shift attendance', error });
+    // }
+        try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); // Atur waktu ke awal hari
 
-    try {
-        const shifts = await Shift.find();
+        // Dapatkan semua karyawan yang memiliki shift
+        const employees = await Employee.find().populate('shift');
 
-        const currentShiftAttendances = [];
+        const attendanceData = await Promise.all(
+            employees.map(async (employee) => {
+                // Cek apakah shift karyawan berlangsung hari ini
+                const shiftStartTime = new Date(today);
+                const [shiftStartHour, shiftStartMinute] = employee.shift.startTime.split(':');
+                shiftStartTime.setHours(shiftStartHour, shiftStartMinute, 0, 0); // Set waktu shift start
 
-        for (const shift of shifts) {
-            const [startHour, startMinute] = shift.startTime.split(':');
-            const shiftStart = new Date();
-            shiftStart.setHours(parseInt(startHour), parseInt(startMinute), 0, 0);
+                const shiftEndTime = new Date(today);
+                const [shiftEndHour, shiftEndMinute] = employee.shift.endTime.split(':');
+                shiftEndTime.setHours(shiftEndHour, shiftEndMinute, 0, 0); // Set waktu shift end
 
-            const [endHour, endMinute] = shift.endTime.split(':');
-            const shiftEnd = new Date();
-            shiftEnd.setHours(parseInt(endHour), parseInt(endMinute), 0, 0);
+                // Cek apakah saat ini berada dalam rentang shift karyawan
+                const now = new Date();
+                if (now < shiftStartTime || now > shiftEndTime) {
+                    return null; // Karyawan tidak berada dalam shift yang berlangsung saat ini
+                }
 
-            if (currentTime >= shiftStart && currentTime <= shiftEnd) {
-                const attendances = await Attendance.find({ shift: shift._id }).populate('employee');
-                currentShiftAttendances.push({
-                    shift,
-                    attendances,
+                // Dapatkan absensi karyawan untuk hari ini
+                const attendances = await Attendance.find({
+                    employee: employee._id,
+                    createdAt: {
+                        $gte: today,
+                        $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000), // Hingga akhir hari ini
+                    },
                 });
-            }
-        }
 
-        res.json(currentShiftAttendances);
+                const attendanceRecords = attendances.map((attendance) => {
+                    // Format checkInTime dan checkOutTime sesuai dengan zona waktu
+                    const checkInTime = attendance.checkInTime
+                        ? new Date(attendance.checkInTime).toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                        : null;
+
+                    const checkOutTime = attendance.checkOutTime
+                        ? new Date(attendance.checkOutTime).toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                        : null;
+
+                    return {
+                        date: today.toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).split(',')[0],
+                        attendanceId: attendance._id,
+                        status: attendance.status,
+                        lateTime: attendance.lateTime || 0,
+                        checkInTime: checkInTime,
+                        checkOutTime: checkOutTime,
+                    };
+                });
+
+                // Jika karyawan belum melakukan check-in hari ini, tambahkan status "Awaiting" atau "Alpha"
+                if (attendanceRecords.length === 0) {
+                    const gracePeriod = new Date(shiftStartTime);
+                    gracePeriod.setHours(gracePeriod.getHours() + 2); // Tambahkan 2 jam untuk grace period
+
+                    if (now >= shiftStartTime && now >= gracePeriod) {
+                        attendanceRecords.push({
+                            date: today.toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).split(',')[0],
+                            status: 'Alpha', // Tidak hadir
+                            lateTime: null,
+                            checkInTime: null,
+                            checkOutTime: null,
+                        });
+                    } else {
+                        attendanceRecords.push({
+                            date: today.toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).split(',')[0],
+                            status: 'Awaiting', // Belum check-in tapi masih dalam waktu
+                            lateTime: null,
+                            checkInTime: null,
+                            checkOutTime: null,
+                        });
+                    }
+                }
+
+                return {
+                    employeeId: employee._id,
+                    employeeName: employee.fullName,
+                    shiftId: employee.shift._id,
+                    shiftName: employee.shift.shiftName,
+                    shiftStart: employee.shift.startTime,
+                    shiftEnd: employee.shift.endTime,
+                    attendance: attendanceRecords,
+                };
+            })
+        );
+
+        // Filter untuk hanya mengembalikan karyawan yang memiliki shift berlangsung hari ini
+        const filteredAttendanceData = attendanceData.filter((data) => data !== null);
+
+        res.json(filteredAttendanceData);
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching current shift attendance', error });
+        res.status(500).json({ message: 'Error fetching attendance for today', error });
     }
 };
 
