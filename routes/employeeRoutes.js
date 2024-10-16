@@ -5,7 +5,8 @@ const {
     getEmployeeById,
     updateEmployee,
     deleteEmployee,
-    loginEmployee
+    loginEmployee,
+    getSalaryAndEmployeeCount
 } = require('../controllers/employeeController');
 
 const router = express.Router();
@@ -25,6 +26,10 @@ router.post('/login', async (req, res) => {
 // Get All Employees (with role and shift details)
 router.get('/', async (req, res) => {
     await getAllEmployees(req, res);
+});
+
+router.get('/ces', async (req, res) => {
+    await getSalaryAndEmployeeCount(req, res);
 });
 
 // Get Employee by ID (with role and shift details)

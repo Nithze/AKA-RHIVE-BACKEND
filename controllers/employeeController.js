@@ -88,6 +88,40 @@ exports.loginEmployee = async (req, res) => {
     }
 };
 
+// Get Total Salary Distribution and Employee Count for Current Month
+exports.getSalaryAndEmployeeCount = async (req, res) => {
+    try {
+        const currentMonth = new Date().getMonth(); // Mendapatkan bulan saat ini (0-11)
+        const currentYear = new Date().getFullYear(); // Mendapatkan tahun saat ini
+        
+        // Mengambil semua karyawan
+        const employees = await Employee.find().populate('role');
+
+        // Menghitung total gaji dan jumlah karyawan
+        let totalSalary = 0;
+        let totalEmployees = employees.length;
+        let employeeOfTheMonthCount = 0;
+
+        employees.forEach(employee => {
+            totalSalary += employee.role.salary; // Tambahkan gaji karyawan
+            
+            // Hitung employee of the month berdasarkan startDate
+            const startDate = new Date(employee.startDate);
+            if (startDate.getMonth() === currentMonth && startDate.getFullYear() === currentYear) {
+                employeeOfTheMonthCount += 1; // Karyawan yang mulai di bulan ini
+            }
+        });
+
+        res.json({
+            totalSalaryDistribution: totalSalary,
+            totalEmployees,
+            employeeOfTheMonthCount
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Error fetching salary and employee count', error });
+    }
+};
+
 
 
 // Get All Employees
