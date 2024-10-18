@@ -149,12 +149,12 @@ exports.getEmployeeById = async (req, res) => {
 
 // Update Employee
 exports.updateEmployee = async (req, res) => {
-    const { fullName, nik, birthDate, gender, address, role, startDate, shift, phoneNumber, password } = req.body;
+    const { fullName, nik, birthDate, gender, address, role, startDate, shift, phoneNumber, password, bankAccountNumber, accountHolderName } = req.body;
 
     try {
         const updatedEmployee = await Employee.findByIdAndUpdate(
             req.params.id,
-            { fullName, nik, birthDate, gender, address, role, startDate, shift, phoneNumber, password },
+            { fullName, nik, birthDate, gender, address, role, startDate, shift, phoneNumber, password, bankAccountNumber, accountHolderName },
             { new: true }
         );
 

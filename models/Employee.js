@@ -48,11 +48,11 @@ const employeeSchema = new mongoose.Schema({
     // Field baru untuk nomor rekening dan rekening atas nama
     bankAccountNumber: {
         type: String,
-        required: false, // Bisa jadi tidak wajib
+        required: true, // Bisa jadi tidak wajib
     },
     accountHolderName: {
         type: String,
-        required: false, // Bisa jadi tidak wajib
+        required: true, // Bisa jadi tidak wajib
     }
 }, { timestamps: true });
 
