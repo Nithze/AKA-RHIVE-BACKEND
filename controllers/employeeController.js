@@ -77,13 +77,13 @@ exports.loginEmployee = async (req, res) => {
         // Jika login berhasil, kirimkan data karyawan beserta role dan shift
         res.json({
             id: employee._id,
-            fullName: employee.fullName,
-            nik: employee.nik,
-            role: employee.role, // Lengkap dengan detail role
-            shift: employee.shift, // Lengkap dengan detail shift
-            phoneNumber: employee.phoneNumber,
-            bankAccountNumber: employee.bankAccountNumber, // Tambahkan nomor rekening
-            accountHolderName: employee.accountHolderName, // Tambahkan atas nama rekening
+            // fullName: employee.fullName,
+            // nik: employee.nik,
+            // role: employee.role, // Lengkap dengan detail role
+            // shift: employee.shift, // Lengkap dengan detail shift
+            // phoneNumber: employee.phoneNumber,
+            // bankAccountNumber: employee.bankAccountNumber, // Tambahkan nomor rekening
+            // accountHolderName: employee.accountHolderName, // Tambahkan atas nama rekening
         });
     } catch (error) {
         res.status(500).json({ message: 'Error logging in', error });
