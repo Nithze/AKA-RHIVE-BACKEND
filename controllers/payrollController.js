@@ -84,151 +84,17 @@ const countAttendanceStatusByEmployeeIdInMonth = async (year, month, employeeId)
     };
 };
 
-// exports.createPayroll = async (req, res) => {
-//     const { year, month, employeeId, deductions, bonuses } = req.body;
-//
-//     try {
-//         // Dapatkan karyawan berdasarkan employeeId
-//         const employee = await Employee.findById(employeeId)
-//             .populate('role') // Populasi role untuk mendapatkan name
-//             .populate('shift'); // Populasi shift untuk mendapatkan name
-//
-//         if (!employee) {
-//             return res.status(404).json({ message: 'Employee not found' });
-//         }
-//
-//         // Hitung gaji pokok berdasarkan role
-//         const basicSalary = employee.role.salary; 
-//
-//         // Hitung alpha count dan total potongan
-//         const attendanceCounts = await countAttendanceStatusByEmployeeIdInMonth(year, month, employeeId);
-//         const alphaCount = attendanceCounts.countAlpha;
-//
-//         // Hitung potongan untuk Alpha
-//         const deductionPerAlpha = 20000; // Misalnya, potongan per alpha
-//         const alphaDeductionAmount = alphaCount * deductionPerAlpha;
-//
-//         // Hitung total potongan
-//         const totalDeductions = alphaDeductionAmount + (deductions ? deductions.reduce((sum, deduction) => sum + deduction.amount, 0) : 0);
-//
-//         // Hitung total bonus
-//         const totalBonus = bonuses ? bonuses.reduce((sum, bonus) => sum + bonus.amount, 0) : 0;
-//
-//         // Hitung gaji bersih
-//         const netSalary = basicSalary - totalDeductions + totalBonus;
-//
-//         // Simpan penggajian
-//         const payroll = new Payroll({
-//             employee: employee._id,
-//             month,
-//             year,
-//             basicSalary,
-//             deductions: [...(deductions || []), { description: "Alpha deduction", amount: alphaDeductionAmount }],
-//             bonuses: bonuses || [],
-//             alphaCount,
-//             totalDeductions,
-//             netSalary,
-//         });
-//
-//         await payroll.save();
-//
-//         res.status(201).json({
-//             message: 'Payroll created successfully',
-//             payroll: {
-//                 _id: payroll._id,
-//                 employee: {
-//                     fullName: employee.fullName, // Pastikan field ini ada di model Employee
-//                     nik: employee.nik,           // Pastikan field ini ada di model Employee
-//                     phoneNumber: employee.phoneNumber, // Pastikan field ini ada di model Employee
-//                     role: employee.role.role,    // Ambil name dari role
-//                     shift: employee.shift.shiftName,  // Ambil name dari shift
-//                 },
-//                 month,
-//                 year,
-//                 basicSalary,
-//                 deductions: payroll.deductions,
-//                 bonuses: payroll.bonuses,
-//                 alphaCount: payroll.alphaCount,
-//                 deductionDetails: {
-//                     alphaDeduction: {
-//                         description: "Deduction for alpha count",
-//                         amount: alphaDeductionAmount,
-//                         calculation: `${alphaCount} * ${deductionPerAlpha}` // Penjelasan perhitungan
-//                     },
-//                     totalDeductions,
-//                 },
-//                 totalBonus,
-//                 netSalary,
-//                 createdAt: payroll.createdAt,
-//                 updatedAt: payroll.updatedAt,
-//             },
-//         });
-//     } catch (error) {
-//         res.status(500).json({ message: 'Error creating payroll', error });
-//     }
-// };
-//
-// exports.getAllPayrolls = async (req, res) => {
-//     try {
-//         // Dapatkan semua penggajian dengan populate untuk employee, role, dan shift
-//         const payrolls = await Payroll.find()
-//             .populate({
-//                 path: 'employee',
-//                 populate: [
-//                     { path: 'role' },  // Populate role
-//                     { path: 'shift' }   // Populate shift
-//                 ]
-//             });
-//
-//         // Format response untuk setiap payroll
-//         const formattedPayrolls = payrolls.map(payroll => {
-//             const alphaDeduction = payroll.deductions.find(d => d.description === "Alpha deduction") || { amount: 0 };
-//             const totalDeductions = payroll.deductions.reduce((sum, deduction) => sum + deduction.amount, 0);
-//             const totalBonus = payroll.bonuses ? payroll.bonuses.reduce((sum, bonus) => sum + bonus.amount, 0) : 0;
-//
-//             return {
-//                 _id: payroll._id,
-//                 employee: {
-//                     fullName: payroll.employee.fullName,
-//                     nik: payroll.employee.nik,
-//                     phoneNumber: payroll.employee.phoneNumber,
-//                     role: payroll.employee.role.role,
-//                     shift: payroll.employee.shift.shiftName
-//                 },
-//                 month: payroll.month,
-//                 year: payroll.year,
-//                 basicSalary: payroll.basicSalary,
-//                 deductions: payroll.deductions,
-//                 bonuses: payroll.bonuses,
-//                 alphaCount: payroll.alphaCount,
-//                 deductionDetails: {
-//                     alphaDeduction: {
-//                         description: "Deduction for alpha count",
-//                         amount: alphaDeduction.amount,
-//                         calculation: `${payroll.alphaCount} * 20000` // Misalnya, potongan per alpha
-//                     },
-//                     totalDeductions: totalDeductions
-//                 },
-//                 totalBonus: totalBonus,
-//                 netSalary: payroll.netSalary,
-//                 createdAt: payroll.createdAt,
-//                 updatedAt: payroll.updatedAt,
-//             };
-//         });
-//
-//         res.status(200).json({
-//             message: 'Payrolls retrieved successfully',
-//             payroll: formattedPayrolls,
-//         });
-//     } catch (error) {
-//         res.status(500).json({ message: 'Error retrieving payrolls', error });
-//     }
-// };
-//
+
 exports.createPayroll = async (req, res) => {
     const { year, month, employeeId, deductions, bonuses, deductionPerAlpha } = req.body;
 
     try {
+        // Cek apakah payroll sudah ada untuk employee di bulan dan tahun yang sama
+        const existingPayroll = await Payroll.findOne({ employee: employeeId, month, year });
+        if (existingPayroll) {
+            return res.status(400).json({ message: 'Payroll for this employee already exists for the given month and year' });
+        }
+
         // Dapatkan karyawan berdasarkan employeeId
         const employee = await Employee.findById(employeeId)
             .populate('role') // Populasi role untuk mendapatkan name
@@ -239,7 +105,7 @@ exports.createPayroll = async (req, res) => {
         }
 
         // Hitung gaji pokok berdasarkan role
-        const basicSalary = employee.role.salary; 
+        const basicSalary = employee.role.salary;
 
         // Hitung alpha count dan total potongan
         const attendanceCounts = await countAttendanceStatusByEmployeeIdInMonth(year, month, employeeId);
@@ -308,6 +174,7 @@ exports.createPayroll = async (req, res) => {
     }
 };
 
+
 exports.getAllPayrolls = async (req, res) => {
     try {
         const payrolls = await Payroll.find()
@@ -364,6 +231,23 @@ exports.getAllPayrolls = async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ message: 'Error retrieving payrolls', error });
+    }
+};
+
+exports.deletePayroll = async (req, res) => {
+    const { payrollId } = req.params; // Mengambil payrollId dari parameter URL
+
+    try {
+        const payroll = await Payroll.findByIdAndDelete(payrollId); // Menghapus payroll berdasarkan ID
+
+        if (!payroll) {
+            return res.status(404).json({ message: 'Payroll not found' }); // Jika tidak ditemukan, kembalikan 404
+        }
+
+        res.status(200).json({ message: 'Payroll deleted successfully' }); // Mengembalikan pesan sukses
+    } catch (error) {
+        console.error(error); // Log error untuk debug
+        res.status(500).json({ message: 'Error deleting payroll', error }); // Mengembalikan error
     }
 };
 
