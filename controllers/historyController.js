@@ -18,7 +18,6 @@ exports.createHistory = async (req, res) => {
 						item_name: item.item_name, // Ensure `item_name` is passed in the request body
 						stock: item.quantity, // Stock starts with the quantity from the shipment
 						supplier: item.supplier, // Supplier should be passed in the request
-						reorder_level: item.reorder_level || 3, // Default reorder level to 3 if not provided
 					});
 					foundItem = await newItem.save();
 				} else {

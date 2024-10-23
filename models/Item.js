@@ -23,4 +23,17 @@ const ItemSchema = new Schema({
 	},
 });
 
+// Pre-save middleware to automatically adjust reorder level based on stock
+ItemSchema.pre("save", function (next) {
+	// Check the current stock and update reorder_level
+	if (this.stock >= 50) {
+		this.reorder_level = 3; // plentiful
+	} else if (this.stock >= 15 && this.stock < 50) {
+		this.reorder_level = 2; // getting low
+	} else if (this.stock < 15) {
+		this.reorder_level = 1; // reorder immediately
+	}
+	next();
+});
+
 module.exports = mongoose.model("Item", ItemSchema);
