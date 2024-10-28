@@ -10,23 +10,23 @@ const Item = require("../models/Item");
 // 	}
 // };
 exports.getItems = async (req, res) => {
-  try {
-    const items = await Item.find();
+	try {
+		const items = await Item.find();
 
-    // Count total items
-    const totalItems = items.length;
+		// Count total items
+		const totalItems = items.length;
 
-    // Calculate total stock by summing up the stock field for each item
-    const totalStock = items.reduce((acc, item) => acc + item.stock, 0);
+		// Calculate total stock by summing up the stock field for each item
+		const totalStock = items.reduce((acc, item) => acc + item.stock, 0);
 
-    res.status(200).json({
-      totalItems,  // Total number of items
-      totalStock,  // Total stock count
-      items        // Actual items array
-    });
-  } catch (error) {
-    res.status(500).json({ message: "Error fetching items", error });
-  }
+		res.status(200).json({
+			totalItems, // Total number of items
+			totalStock, // Total stock count
+			items, // Actual items array
+		});
+	} catch (error) {
+		res.status(500).json({ message: "Error fetching items", error });
+	}
 };
 
 // Get a single item by ID
@@ -70,5 +70,27 @@ exports.deleteItem = async (req, res) => {
 		res.status(200).json({ message: "Item deleted successfully" });
 	} catch (error) {
 		res.status(500).json({ message: "Error deleting item", error });
+	}
+};
+
+exports.getUniqueSuppliers = async (req, res) => {
+	try {
+		// Using MongoDB's aggregation pipeline to get unique supplier names
+		const suppliers = await Item.aggregate([
+			{
+				$group: {
+					_id: "$supplier", // Group by supplier
+				},
+			},
+			{
+				$replaceRoot: { newRoot: { supplier: "$_id" } }, // Format output
+			},
+		]);
+
+		// Send the list of unique suppliers
+		res.status(200).json(suppliers.map((s) => s.supplier));
+	} catch (error) {
+		console.error("Error fetching unique suppliers:", error);
+		res.status(500).json({ message: "Error fetching unique suppliers" });
 	}
 };

@@ -4,9 +4,15 @@ const {
 	getItemById,
 	updateItem,
 	deleteItem,
+	getUniqueSuppliers, // Import the new function
 } = require("../controllers/itemController");
 
 const router = express.Router();
+
+// Get unique supplier names - Place this before the `/:id` route
+router.get("/suppliers", async (req, res) => {
+	await getUniqueSuppliers(req, res);
+});
 
 // Get All Items
 router.get("/", async (req, res) => {
