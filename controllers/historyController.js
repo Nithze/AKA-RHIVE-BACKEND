@@ -51,7 +51,7 @@ exports.getHistories = async (req, res) => {
 	try {
 		const histories = await History.find()
 			.populate("user_id", "name")
-			.populate("items.item_id", "item_name");
+			.populate("items.item_id", "item_name supplier");
 		res.status(200).json(histories);
 	} catch (error) {
 		res.status(500).json({ message: "Error fetching histories", error });
