@@ -129,7 +129,7 @@ exports.createPayroll = async (req, res) => {
             month,
             year,
             basicSalary,
-            deductions: [...(deductions || []), { description: "Alpha deduction", amount: alphaDeductionAmount }],
+            deductions: [...(deductions || []), { description: "Alpha deduction", amount: deductionPerAlpha }],
             bonuses: bonuses || [],
             alphaCount,
             totalDeductions,
@@ -143,11 +143,11 @@ exports.createPayroll = async (req, res) => {
             payroll: {
                 _id: payroll._id,
                 employee: {
-                    fullName: employee.fullName, // Pastikan field ini ada di model Employee
-                    nik: employee.nik,           // Pastikan field ini ada di model Employee
-                    phoneNumber: employee.phoneNumber, // Pastikan field ini ada di model Employee
-                    role: employee.role.role,    // Ambil name dari role
-                    shift: employee.shift.shiftName,  // Ambil name dari shift
+                    fullName: employee.fullName, 
+                    nik: employee.nik,           
+                    phoneNumber: employee.phoneNumber, 
+                    role: employee.role.role,    
+                    shift: employee.shift.shiftName,  
                 },
                 month,
                 year,
@@ -175,6 +175,64 @@ exports.createPayroll = async (req, res) => {
 };
 
 
+// exports.getAllPayrolls = async (req, res) => {
+//     try {
+//         const payrolls = await Payroll.find()
+//             .populate({
+//                 path: 'employee',
+//                 populate: [
+//                     { path: 'role' },
+//                     { path: 'shift' }
+//                 ]
+//             });
+//
+//         if (payrolls.length === 0) {
+//             return res.status(404).json({ message: 'No payrolls found' });
+//         }
+//
+//         const response = payrolls.map(payroll => {
+//             // Temukan potongan alpha dalam array deductions
+//             const alphaDeduction = payroll.deductions.find(deduction => deduction.description === "Alpha deduction") || { amount: 0 };
+//             const deductionPerAlpha = alphaDeduction.amount;
+//
+//             return {
+//                 _id: payroll._id,
+//                 employee: {
+//                     fullName: payroll.employee.fullName,
+//                     nik: payroll.employee.nik,
+//                     phoneNumber: payroll.employee.phoneNumber,
+//                     role: payroll.employee.role.role,
+//                     shift: payroll.employee.shift.shiftName,
+//                 },
+//                 month: payroll.month,
+//                 year: payroll.year,
+//                 basicSalary: payroll.basicSalary,
+//                 deductions: payroll.deductions,
+//                 bonuses: payroll.bonuses,
+//                 alphaCount: payroll.alphaCount,
+//                 deductionDetails: {
+//                     alphaDeduction: {
+//                         description: "Deduction for alpha count",
+//                         amount: deductionPerAlpha,
+//                         calculation: `${payroll.alphaCount} * ${deductionPerAlpha}` // Menggunakan nilai potongan alpha
+//                     },
+//                     totalDeductions: payroll.totalDeductions,
+//                 },
+//                 totalBonus: payroll.bonuses.reduce((sum, bonus) => sum + bonus.amount, 0),
+//                 netSalary: payroll.netSalary,
+//                 createdAt: payroll.createdAt,
+//                 updatedAt: payroll.updatedAt,
+//             };
+//         });
+//
+//         res.status(200).json({
+//             message: 'Payrolls retrieved successfully',
+//             payrolls: response,
+//         });
+//     } catch (error) {
+//         res.status(500).json({ message: 'Error retrieving payrolls', error });
+//     }
+// };
 exports.getAllPayrolls = async (req, res) => {
     try {
         const payrolls = await Payroll.find()
@@ -194,6 +252,17 @@ exports.getAllPayrolls = async (req, res) => {
             // Temukan potongan alpha dalam array deductions
             const alphaDeduction = payroll.deductions.find(deduction => deduction.description === "Alpha deduction") || { amount: 0 };
             const deductionPerAlpha = alphaDeduction.amount;
+
+            // Hitung total bonus
+            const totalBonus = payroll.bonuses.reduce((sum, bonus) => sum + bonus.amount, 0);
+
+            // Rincian perhitungan
+            const calculations = {
+                basicSalary: payroll.basicSalary,
+                totalDeductions: payroll.totalDeductions,
+                totalBonus: totalBonus,
+                netSalary: payroll.netSalary,
+            };
 
             return {
                 _id: payroll._id,
@@ -218,10 +287,11 @@ exports.getAllPayrolls = async (req, res) => {
                     },
                     totalDeductions: payroll.totalDeductions,
                 },
-                totalBonus: payroll.bonuses.reduce((sum, bonus) => sum + bonus.amount, 0),
+                totalBonus: totalBonus,
                 netSalary: payroll.netSalary,
                 createdAt: payroll.createdAt,
                 updatedAt: payroll.updatedAt,
+                calculations, // Menyertakan rincian perhitungan di sini
             };
         });
 
@@ -233,6 +303,7 @@ exports.getAllPayrolls = async (req, res) => {
         res.status(500).json({ message: 'Error retrieving payrolls', error });
     }
 };
+
 
 exports.deletePayroll = async (req, res) => {
     const { payrollId } = req.params; // Mengambil payrollId dari parameter URL
