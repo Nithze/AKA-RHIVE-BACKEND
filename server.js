@@ -16,6 +16,7 @@ const historyRoutes = require("./routes/historyRoutes");
 const attendanceRoutes = require("./routes/attendanceRoutes");
 const payrollRoutes = require('./routes/payrollRoutes')
 const locationRoutes = require('./routes/locationRoutes');
+const salesRoutes = require("./routes/salesRoutes");
 
 dotenv.config();
 
@@ -51,6 +52,7 @@ app.use("/api/history", historyRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use('/api/payroll', payrollRoutes);
 app.use('/api/locations', locationRoutes);
+app.use("/api/sales", salesRoutes);
 
 // Error Handling Middleware
 app.use(errorHandler);
