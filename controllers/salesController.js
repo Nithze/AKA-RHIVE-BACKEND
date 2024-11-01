@@ -75,3 +75,89 @@ exports.deleteSale = async (req, res) => {
 		res.status(500).json({ message: error.message });
 	}
 };
+
+// Get frequently sold items with weekly, monthly, and yearly totals
+exports.getFrequentlySoldItems = async (req, res) => {
+  try {
+    // Calculate date ranges for past week, month, and year
+    const now = new Date();
+    const pastWeek = new Date(now);
+    pastWeek.setDate(now.getDate() - 7);
+
+    const pastMonth = new Date(now);
+    pastMonth.setMonth(now.getMonth() - 1);
+
+    const pastYear = new Date(now);
+    pastYear.setFullYear(now.getFullYear() - 1);
+
+    // Aggregate sales with time period filtering
+    const frequentlySoldItems = await Sale.aggregate([
+      { $unwind: "$items" }, // Deconstruct items array in each sale
+
+      {
+        $facet: {
+          // Weekly sales
+          weekly: [
+            { $match: { date: { $gte: pastWeek } } },
+            { 
+              $group: { 
+                _id: "$items.item_id", 
+                totalQuantitySold: { $sum: "$items.quantity" } 
+              } 
+            },
+          ],
+          // Monthly sales
+          monthly: [
+            { $match: { date: { $gte: pastMonth } } },
+            { 
+              $group: { 
+                _id: "$items.item_id", 
+                totalQuantitySold: { $sum: "$items.quantity" } 
+              } 
+            },
+          ],
+          // Yearly sales
+          yearly: [
+            { $match: { date: { $gte: pastYear } } },
+            { 
+              $group: { 
+                _id: "$items.item_id", 
+                totalQuantitySold: { $sum: "$items.quantity" } 
+              } 
+            },
+          ],
+        },
+      },
+    ]);
+
+    // Populate item details for each item in each period
+    const populateOptions = { path: "_id", select: "item_name stock supplier reorder_level" }; // Adjust fields as needed
+    const populatedResults = {
+      weekly: await Item.populate(frequentlySoldItems[0].weekly, populateOptions),
+      monthly: await Item.populate(frequentlySoldItems[0].monthly, populateOptions),
+      yearly: await Item.populate(frequentlySoldItems[0].yearly, populateOptions),
+    };
+
+    // Format results to include total sold quantity in the response
+    const formatResults = (results) => {
+      return results.map(item => ({
+        _id: item._id,
+        item_name: item.item_name,
+        totalQuantitySold: item.totalQuantitySold,
+        stock: item.stock,
+        supplier: item.supplier,
+        reorder_level: item.reorder_level,
+      }));
+    };
+
+    res.status(200).json({
+      weekly: formatResults(populatedResults.weekly),
+      monthly: formatResults(populatedResults.monthly),
+      yearly: formatResults(populatedResults.yearly),
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+
