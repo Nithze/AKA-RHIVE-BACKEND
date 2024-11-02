@@ -1017,17 +1017,78 @@ exports.getAttendanceByEmployeeIdInMonth = async (req, res) => {
 
 // aaaaaaaaaaaaaaaaaaa
 // Get All Pending Attendances
+// exports.getPendingAttendances = async (req, res) => {
+//     try {
+//         // Dapatkan semua karyawan beserta role dan shift mereka
+//         const employees = await Employee.find().populate('shift').populate('role');
+//
+//         const pendingAttendanceData = await Promise.all(
+//             employees.map(async (employee) => {
+//                 // Dapatkan attendances dengan status Pending untuk karyawan tersebut
+//                 const attendances = await Attendance.find({
+//                     employee: employee._id,
+//                     status: 'Pending', // Filter hanya untuk status Pending
+//                 });
+//
+//                 if (attendances.length > 0) {
+//                     const attendanceRecords = attendances.map(attendance => {
+//                         const formattedDate = new Date(attendance.createdAt).toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', year: 'numeric', month: '2-digit', day: '2-digit' }).split(',')[0];
+//
+//                         const checkInTime = attendance.checkInTime
+//                             ? new Date(attendance.checkInTime).toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+//                             : null;
+//
+//                         const checkOutTime = attendance.checkOutTime
+//                             ? new Date(attendance.checkOutTime).toLocaleString('en-ID', { timeZone: 'Asia/Jakarta', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+//                             : null;
+//
+//                         return {
+//                             attendanceId: attendance._id, // Attendance ID
+//                             date: formattedDate,
+//                             status: attendance.status,
+//                             reason: attendance.reason || 'No reason provided', // Tampilkan alasan jika ada
+//                             lateTime: attendance.lateTime || 0,
+//                             checkInTime: checkInTime,
+//                             checkOutTime: checkOutTime,
+//                         };
+//                     });
+//
+//                     return {
+//                         employeeId: employee._id,
+//                         employeeName: employee.fullName,
+//                         phoneNumber: employee.phoneNumber, // Tampilkan nomor telepon
+//                         role: employee.role.role, // Tampilkan role karyawan
+//                         shiftId: employee.shift._id,
+//                         shiftName: employee.shift.shiftName,
+//                         shiftStart: employee.shift.startTime,
+//                         shiftEnd: employee.shift.endTime,
+//                         attendance: attendanceRecords,
+//                     };
+//                 } else {
+//                     return null; // Tidak ada data pending untuk karyawan ini
+//                 }
+//             })
+//         );
+//
+//         // Filter out null responses (karyawan tanpa data pending)
+//         const filteredAttendanceData = pendingAttendanceData.filter(record => record !== null);
+//
+//         res.json(filteredAttendanceData);
+//     } catch (error) {
+//         res.status(500).json({ message: 'Error fetching pending attendances', error });
+//     }
+// };
 exports.getPendingAttendances = async (req, res) => {
     try {
         // Dapatkan semua karyawan beserta role dan shift mereka
         const employees = await Employee.find().populate('shift').populate('role');
 
-        const pendingAttendanceData = await Promise.all(
+        const attendanceData = await Promise.all(
             employees.map(async (employee) => {
-                // Dapatkan attendances dengan status Pending untuk karyawan tersebut
+                // Dapatkan attendances dengan status "Pending" atau "Absent" untuk karyawan tersebut
                 const attendances = await Attendance.find({
                     employee: employee._id,
-                    status: 'Pending', // Filter hanya untuk status Pending
+                    status: { $in: ['Pending', 'Absent'] }, // Filter untuk status "Pending" dan "Absent"
                 });
 
                 if (attendances.length > 0) {
@@ -1043,10 +1104,10 @@ exports.getPendingAttendances = async (req, res) => {
                             : null;
 
                         return {
-                            attendanceId: attendance._id, // Attendance ID
+                            attendanceId: attendance._id,
                             date: formattedDate,
                             status: attendance.status,
-                            reason: attendance.reason || 'No reason provided', // Tampilkan alasan jika ada
+                            reason: attendance.reason || 'No reason provided',
                             lateTime: attendance.lateTime || 0,
                             checkInTime: checkInTime,
                             checkOutTime: checkOutTime,
@@ -1056,8 +1117,8 @@ exports.getPendingAttendances = async (req, res) => {
                     return {
                         employeeId: employee._id,
                         employeeName: employee.fullName,
-                        phoneNumber: employee.phoneNumber, // Tampilkan nomor telepon
-                        role: employee.role.role, // Tampilkan role karyawan
+                        phoneNumber: employee.phoneNumber,
+                        role: employee.role.role,
                         shiftId: employee.shift._id,
                         shiftName: employee.shift.shiftName,
                         shiftStart: employee.shift.startTime,
@@ -1065,19 +1126,20 @@ exports.getPendingAttendances = async (req, res) => {
                         attendance: attendanceRecords,
                     };
                 } else {
-                    return null; // Tidak ada data pending untuk karyawan ini
+                    return null; // Tidak ada data "Pending" atau "Absent" untuk karyawan ini
                 }
             })
         );
 
-        // Filter out null responses (karyawan tanpa data pending)
-        const filteredAttendanceData = pendingAttendanceData.filter(record => record !== null);
+        // Filter out null responses (karyawan tanpa data "Pending" atau "Absent")
+        const filteredAttendanceData = attendanceData.filter(record => record !== null);
 
         res.json(filteredAttendanceData);
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching pending attendances', error });
+        res.status(500).json({ message: 'Error fetching attendance data', error });
     }
 };
+
 
 // Count Attendance Status by Employee ID in a Month
 // exports.countAttendanceStatusByEmployeeIdInMonth = async (req, res) => {
