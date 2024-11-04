@@ -5,6 +5,7 @@ const PayrollController = require('../controllers/payrollController');
 // Route untuk membuat penggajian
 router.post('/payroll', PayrollController.createPayroll);
 router.get('/payrolls', PayrollController.getAllPayrolls);
+router.get('/payroll/:payrollId', PayrollController.getPayrollById);
 router.delete('/payroll/:payrollId', PayrollController.deletePayroll);
 
 module.exports = router;

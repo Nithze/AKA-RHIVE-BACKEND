@@ -304,6 +304,80 @@ exports.getAllPayrolls = async (req, res) => {
     }
 };
 
+exports.getPayrollById = async (req, res) => {
+    const { payrollId } = req.params; // Mengambil payrollId dari parameter URL
+
+    try {
+        // Temukan payroll berdasarkan ID dan populate data karyawan, role, dan shift
+        const payroll = await Payroll.findById(payrollId)
+            .populate({
+                path: 'employee',
+                populate: [
+                    { path: 'role' }, // Mengambil detail role
+                    { path: 'shift' } // Mengambil detail shift
+                ]
+            });
+
+        if (!payroll) {
+            return res.status(404).json({ message: 'Payroll not found' }); // Jika tidak ditemukan, kembalikan 404
+        }
+
+        // Temukan potongan alpha dalam array deductions
+        const alphaDeduction = payroll.deductions.find(deduction => deduction.description === "Alpha deduction") || { amount: 0 };
+        const deductionPerAlpha = alphaDeduction.amount;
+
+        // Hitung total bonus
+        const totalBonus = payroll.bonuses.reduce((sum, bonus) => sum + bonus.amount, 0);
+
+        // Rincian perhitungan
+        const calculations = {
+            basicSalary: payroll.basicSalary,
+            totalDeductions: payroll.totalDeductions,
+            totalBonus: totalBonus,
+            netSalary: payroll.netSalary,
+        };
+
+        // Susun respons dengan detail lengkap
+        const response = {
+            _id: payroll._id,
+            employee: {
+                fullName: payroll.employee.fullName,
+                nik: payroll.employee.nik,
+                phoneNumber: payroll.employee.phoneNumber,
+                role: payroll.employee.role.role,
+                shift: payroll.employee.shift.shiftName,
+            },
+            month: payroll.month,
+            year: payroll.year,
+            basicSalary: payroll.basicSalary,
+            deductions: payroll.deductions,
+            bonuses: payroll.bonuses,
+            alphaCount: payroll.alphaCount,
+            deductionDetails: {
+                alphaDeduction: {
+                    description: "Deduction for alpha count",
+                    amount: deductionPerAlpha,
+                    calculation: `${payroll.alphaCount} * ${deductionPerAlpha}`, // Penjelasan perhitungan potongan alpha
+                },
+                totalDeductions: payroll.totalDeductions,
+            },
+            totalBonus: totalBonus,
+            netSalary: payroll.netSalary,
+            createdAt: payroll.createdAt,
+            updatedAt: payroll.updatedAt,
+            calculations, // Menyertakan rincian perhitungan di sini
+        };
+
+        res.status(200).json({
+            message: 'Payroll retrieved successfully',
+            payroll: response,
+        });
+    } catch (error) {
+        res.status(500).json({ message: 'Error retrieving payroll', error });
+    }
+};
+
+
 
 exports.deletePayroll = async (req, res) => {
     const { payrollId } = req.params; // Mengambil payrollId dari parameter URL
